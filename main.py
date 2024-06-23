@@ -8,7 +8,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 app = FastAPI()
 
 # Load the DataFrame
-df = pd.read_csv("https://raw.githubusercontent.com/EbadaHamdy/smartto/main/0.csv")
+df = pd.read_csv(r"https://raw.githubusercontent.com/EbadaHamdy/smartto/main/0.csv")
 
 # Convert Tag, Review, and Comment columns to string type
 df['Tag'] = df['Tag'].astype(str)
@@ -22,14 +22,6 @@ class PlanRequest(BaseModel):
     num_days: int
     budget: float
     num_plans: int
-
-class PlanRecommendation(BaseModel):
-    hotel: str
-    hotel_price_per_day: float
-    total_hotel_price: float
-    recommendations: List[str]
-    total_plan_price: float
-    additional_amount_needed: str
 
 class RecommendationsResponse(BaseModel):
     plan_number: int
@@ -118,9 +110,9 @@ def get_recommendations_with_budget(country, governorates, survey_responses, num
             if len(day_recommendations) >= 3:
                 daily_plan = [
                     f"Day {day}:",
-                    f"Restaurant: {day_recommendations.iloc[0]['Title']} → Price: {day_recommendations.iloc[0]['Price']}",
-                    f"{day_recommendations.iloc[1]['tags']}: {day_recommendations.iloc[1]['Title']} → Price: {day_recommendations.iloc[1]['Price']}",
-                    f"{day_recommendations.iloc[2]['tags']}: {day_recommendations.iloc[2]['Title']} → Price: {day_recommendations.iloc[2]['Price']}"
+                    f"Restaurant: {day_recommendations.iloc[0]['Title']} , Price: {day_recommendations.iloc[0]['Price']}",
+                    f"{day_recommendations.iloc[1]['tags']}: {day_recommendations.iloc[1]['Title']} , Price: {day_recommendations.iloc[1]['Price']}",
+                    f"{day_recommendations.iloc[2]['tags']}: {day_recommendations.iloc[2]['Title']} , Price: {day_recommendations.iloc[2]['Price']}"
                 ]
                 plan_recommendations.extend(daily_plan)
 
@@ -164,39 +156,10 @@ def get_plan(plan_num: int):
 
     return recommendations_storage[plan_num - 1]
 
-@app.put("/add-funds/{plan_num}", response_model=RecommendationsResponse)
-def add_funds(plan_num: int, additional_funds: float):
-    global recommendations_storage
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000)
 
-    if plan_num < 1 or plan_num > len(recommendations_storage):
-        raise HTTPException(status_code=404, detail="Plan number out of range.")
-
-    current_plan = recommendations_storage[plan_num - 1]
-
-    # Calculate the remaining funds after adding additional funds
-    current_plan['budget'] += additional_funds
-    remaining_funds = current_plan['budget'] - current_plan['total_plan_price']
-
-    # Determine if additional funds are now sufficient
-    if remaining_funds >= 0:
-        additional_amount_message = "Funds added successfully. You have chosen this trip."
-    else:
-        additional_amount_needed = current_plan['total_plan_price'] - current_plan['budget']
-        additional_amount_message = f"You have entered {additional_funds}, and you need an additional {additional_amount_needed}."
-
-    # Construct message indicating how much funds were added and remaining funds
-    message = f"You have added {additional_funds}. Remaining funds: {remaining_funds}."
-
-    # Return updated plan information with the message
-    return {
-        "plan_number": plan_num,
-        "hotel": current_plan['hotel'],
-        "hotel_price_per_day": current_plan['hotel_price_per_day'],
-        "total_hotel_price": current_plan['total_hotel_price'],
-        "plan_recommendations": current_plan['plan_recommendations'],
-        "total_plan_price": current_plan['total_plan_price'],
-        "additional_amount_needed": f"{additional_amount_message} {message}",
-    }
 
 if __name__ == "__main__":
     import uvicorn
